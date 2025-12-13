@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.saloeater.emi_loot_registry.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "emi_loot_registry.refmap.json",
+  "mixins": [
+    "LootTableParserMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

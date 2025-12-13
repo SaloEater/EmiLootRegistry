@@ -82,10 +82,23 @@ repositories {
     maven {
         url "https://cursemaven.com"
     }
+    maven {
+        url "https://maven.terraformersmc.com/releases/"
+    }
+    flatDir {
+        dirs '../EMI_loot/forge/build/libs'
+    }
 }
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    // EMI dependency
+    implementation fg.deobf("curse.maven:fzzyconfig-1005914:7085017")
+    implementation fg.deobf("curse.maven:kff-351264:7291067")
+    implementation fg.deobf("curse.maven:emiloot-${emiloot_project_id}:${emiloot_file_id}")
+    compileOnly fg.deobf("dev.emi:emi-forge:${emi_version}+${minecraft_version}:api")
+    implementation fg.deobf("dev.emi:emi-forge:${emi_version}+${minecraft_version}")
 
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
@@ -100,7 +113,7 @@ def replaceProperties = [
         forge_version: forge_version, forge_version_range: forge_version_range,
         loader_version_range: loader_version_range,
         mod_id: mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
-        mod_authors: mod_authors, mod_description: mod_description,
+        mod_authors: mod_authors, mod_description: mod_description, emi_loot_version_range: emi_loot_version_range
 ]
 processResources {
     inputs.properties replaceProperties
