@@ -24,12 +24,13 @@ import java.util.Map;
 
 /**
  * Loads LootDataSuppliers from JSON files in datapacks.
- * JSON files should be located at: data/<namespace>/emi_loot_suppliers/<name>.json
+ * JSON files should be located at: data/<namespace>/emi_loot_suppliers/<type>/<name>.json
+ * where <type> is one of: chests, blocks, entities, gameplay, archaeology
  */
 public class SupplierLoader extends SimplePreparableReloadListener<Map<ResourceLocation, JsonObject>> {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new Gson();
-    private static final String FOLDER = "emi_loot_suppliers";
+    private static final String BASE_FOLDER = "emi_loot_suppliers";
 
     // Stores JSON-loaded suppliers separately from registry
     private static final List<JsonLootDataSupplier> loadedSuppliers = new ArrayList<>();
@@ -41,18 +42,21 @@ public class SupplierLoader extends SimplePreparableReloadListener<Map<ResourceL
     @Override
     protected Map<ResourceLocation, JsonObject> prepare(ResourceManager resourceManager, ProfilerFiller profiler) {
         Map<ResourceLocation, JsonObject> suppliers = new java.util.HashMap<>();
-        
-        // Scan for JSON files in all datapacks
-        resourceManager.listResources(FOLDER, path -> path.getPath().endsWith(".json")).forEach((resourceLocation, resource) -> {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.open()))) {
-                JsonObject json = GSON.fromJson(reader, JsonObject.class);
-                suppliers.put(resourceLocation, json);
-                LOGGER.info("Found supplier JSON: {}", resourceLocation);
-            } catch (Exception e) {
-                LOGGER.error("Error reading supplier JSON {}: {}", resourceLocation, e.getMessage());
-            }
-        });
-        
+
+        // Scan for JSON files in all type folders
+        for (String type : new String[]{"chests", "blocks", "entities", "gameplay", "archaeology"}) {
+            String folder = BASE_FOLDER + "/" + type;
+            resourceManager.listResources(folder, path -> path.getPath().endsWith(".json")).forEach((resourceLocation, resource) -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.open()))) {
+                    JsonObject json = GSON.fromJson(reader, JsonObject.class);
+                    suppliers.put(resourceLocation, json);
+                    LOGGER.info("Found supplier JSON: {}", resourceLocation);
+                } catch (Exception e) {
+                    LOGGER.error("Error reading supplier JSON {}: {}", resourceLocation, e.getMessage());
+                }
+            });
+        }
+
         return suppliers;
     }
 
@@ -65,11 +69,13 @@ public class SupplierLoader extends SimplePreparableReloadListener<Map<ResourceL
 
         suppliers.forEach((fileLocation, json) -> {
             try {
-                JsonLootDataSupplier supplier = parseSupplier(json);
+                // Infer context type from folder path
+                LootContextParamSet contextType = inferContextType(fileLocation.getPath());
+                JsonLootDataSupplier supplier = parseSupplier(json, contextType);
                 loadedSuppliers.add(supplier);
 
-                String name = fileLocation.getPath().replace(FOLDER + "/", "").replace(".json", "");
-                LOGGER.info("Loaded supplier '{}' for loot table {}", name, supplier.getLootTableId());
+                String name = fileLocation.getPath().replace(BASE_FOLDER + "/", "").replace(".json", "");
+                LOGGER.info("Loaded supplier '{}' ({}) for loot table {}", name, contextType, supplier.getLootTableId());
             } catch (Exception e) {
                 LOGGER.error("Error parsing supplier JSON {}: {}", fileLocation, e.getMessage());
             }
@@ -80,24 +86,20 @@ public class SupplierLoader extends SimplePreparableReloadListener<Map<ResourceL
         LOGGER.info("Successfully loaded {} suppliers from datapacks", loadedSuppliers.size());
     }
 
-    private JsonLootDataSupplier parseSupplier(JsonObject json) {
+    private JsonLootDataSupplier parseSupplier(JsonObject json, LootContextParamSet contextType) {
         // Parse loot table ID
         String lootTableIdStr = json.get("loot_table_id").getAsString();
         ResourceLocation lootTableId = new ResourceLocation(lootTableIdStr);
-        
-        // Parse context type
-        String contextTypeStr = json.get("context_type").getAsString();
-        LootContextParamSet contextType = parseContextType(contextTypeStr);
-        
+
         // Parse entries
         JsonArray entriesArray = json.getAsJsonArray("entries");
         List<LootTableParser.ItemEntryResult> entries = new LinkedList<>();
-        
+
         for (int i = 0; i < entriesArray.size(); i++) {
             JsonObject entryObj = entriesArray.get(i).getAsJsonObject();
             String itemId = entryObj.get("item").getAsString();
             int weight = entryObj.has("weight") ? entryObj.get("weight").getAsInt() : 1;
-            
+
             ItemStack stack = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(new ResourceLocation(itemId)));
             entries.add(new LootTableParser.ItemEntryResult(
                 stack,
@@ -106,18 +108,27 @@ public class SupplierLoader extends SimplePreparableReloadListener<Map<ResourceL
                 new LinkedList<>()   // TODO: Support functions in future
             ));
         }
-        
+
         return new JsonLootDataSupplier(lootTableId, contextType, entries);
     }
 
-    private LootContextParamSet parseContextType(String type) {
-        return switch (type.toUpperCase()) {
-            case "CHEST" -> LootContextParamSets.CHEST;
-            case "BLOCK" -> LootContextParamSets.BLOCK;
-            case "ENTITY", "MOB" -> LootContextParamSets.ENTITY;
-            case "FISHING" -> LootContextParamSets.FISHING;
-            case "ARCHAEOLOGY" -> LootContextParamSets.ARCHAEOLOGY;
-            default -> throw new IllegalArgumentException("Unknown context type: " + type);
-        };
+    /**
+     * Infers the context type from the file path.
+     * Path format: emi_loot_suppliers/<type>/filename.json
+     */
+    private LootContextParamSet inferContextType(String path) {
+        if (path.contains("/chests/")) {
+            return LootContextParamSets.CHEST;
+        } else if (path.contains("/blocks/")) {
+            return LootContextParamSets.BLOCK;
+        } else if (path.contains("/entities/")) {
+            return LootContextParamSets.ENTITY;
+        } else if (path.contains("/gameplay/")) {
+            return LootContextParamSets.FISHING;
+        } else if (path.contains("/archaeology/")) {
+            return LootContextParamSets.ARCHAEOLOGY;
+        } else {
+            throw new IllegalArgumentException("Cannot infer context type from path: " + path);
+        }
     }
 }
