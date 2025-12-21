@@ -38,10 +38,6 @@ public class SupplierProcessor {
 
             // Convert ResourceLocation (Forge) to ResourceLocation (Fabric) for EMI Loot compatibility
             ResourceLocation id = new ResourceLocation(forgeId.getNamespace(), forgeId.getPath());
-            if (supplier.getMobId() == null) {
-                EMILoot.LOGGER.error("Supplier for ID " + id + " requires mob_id");
-                return;
-            }
             ResourceLocation mobId = supplier.getMobId();
 
             List<LootTableParser.ItemEntryResult> entries = supplier.getEntries();
@@ -104,6 +100,10 @@ public class SupplierProcessor {
                                               Map<ResourceLocation, MobLootTableSender> mobSenders, ResourceLocation mobId) {
         MobLootTableSender sender = mobSenders.get(id);
         if (sender == null) {
+            if (mobId == null) {
+                EMILoot.LOGGER.error("Supplier for ID " + id + " requires mob_id");
+                return;
+            }
             sender = new MobLootTableSender(id, mobId);
         }
         ComplexLootPoolBuilder builder = new ComplexLootPoolBuilder(1.0f, new LinkedList<>(), new LinkedList<>());
