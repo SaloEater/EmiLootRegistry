@@ -1,0 +1,15 @@
+{
+  "loot_table_id": "minecraft:blocks/coal_ore",
+  "entries": [
+    {
+      "item": "minecraft:brewing_stand",
+      "weight": 1,
+      "conditions": [
+        {
+          "type": "random_chance",
+          "chance": 0.05
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "loot_table_id": "minecraft:entities/zombie",
+  "mob_id": "minecraft:zombie",
+  "entries": [
+    {
+      "item": "minecraft:brewing_stand",
+      "weight": 2,
+      "conditions": [
+        {
+          "type": "random_chance",
+          "chance": 0.02
+        }
+      ]
+    }
+  ]
+}

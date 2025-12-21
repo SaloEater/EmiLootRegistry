@@ -38,6 +38,11 @@ public class SupplierProcessor {
 
             // Convert ResourceLocation (Forge) to ResourceLocation (Fabric) for EMI Loot compatibility
             ResourceLocation id = new ResourceLocation(forgeId.getNamespace(), forgeId.getPath());
+            if (supplier.getMobId() == null) {
+                EMILoot.LOGGER.error("Supplier for ID " + id + " requires mob_id");
+                return;
+            }
+            ResourceLocation mobId = supplier.getMobId();
 
             List<LootTableParser.ItemEntryResult> entries = supplier.getEntries();
 
@@ -58,7 +63,7 @@ public class SupplierProcessor {
             } else if (forgeContextType == LootContextParamSets.BLOCK && EMILoot.config.parseBlockLoot) {
                 processSupplierForBlock(id, entries, blockSenders);
             } else if (forgeContextType == LootContextParamSets.ENTITY && EMILoot.config.parseMobLoot) {
-                processSupplierForMob(id, entries, mobSenders);
+                processSupplierForMob(id, entries, mobSenders, mobId);
             } else if ((forgeContextType == LootContextParamSets.FISHING ||
                         forgeContextType == LootContextParamSets.GIFT ||
                         forgeContextType == LootContextParamSets.PIGLIN_BARTER) &&
@@ -96,8 +101,11 @@ public class SupplierProcessor {
     }
 
     private static void processSupplierForMob(ResourceLocation id, List<LootTableParser.ItemEntryResult> entries,
-                                                Map<ResourceLocation, MobLootTableSender> mobSenders) {
-        MobLootTableSender sender = mobSenders.getOrDefault(id, new MobLootTableSender(id, id));
+                                              Map<ResourceLocation, MobLootTableSender> mobSenders, ResourceLocation mobId) {
+        MobLootTableSender sender = mobSenders.get(id);
+        if (sender == null) {
+            sender = new MobLootTableSender(id, mobId);
+        }
         ComplexLootPoolBuilder builder = new ComplexLootPoolBuilder(1.0f, new LinkedList<>(), new LinkedList<>());
         entries.forEach(builder::addItem);
         sender.addBuilder(builder);

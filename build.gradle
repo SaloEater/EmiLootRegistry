@@ -99,6 +99,13 @@ dependencies {
     implementation fg.deobf("curse.maven:emiloot-${emiloot_project_id}:${emiloot_file_id}")
     compileOnly fg.deobf("dev.emi:emi-forge:${emi_version}+${minecraft_version}:api")
     implementation fg.deobf("dev.emi:emi-forge:${emi_version}+${minecraft_version}")
+    runtimeOnly fg.deobf("curse.maven:bossrise-1314084:7009368")
+    runtimeOnly fg.deobf("curse.maven:terramity-1084134:6054971")
+    runtimeOnly fg.deobf("curse.maven:lethality-1282036:7332696")
+    runtimeOnly fg.deobf("curse.maven:ebmobs-921600:6095880")
+    runtimeOnly fg.deobf("curse.maven:curiosapi-309927:6418456")
+    runtimeOnly fg.deobf("curse.maven:cael-308989:5281700")
+    runtimeOnly fg.deobf("curse.maven:gl-388172:7025129")
 
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }

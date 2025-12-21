@@ -2,9 +2,12 @@ package com.saloeater.emi_loot_registry;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import fzzyhmstrs.emi_loot.parser.LootTableParser;
+import fzzyhmstrs.emi_loot.util.TextKey;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
@@ -91,6 +94,12 @@ public class SupplierLoader extends SimplePreparableReloadListener<Map<ResourceL
         String lootTableIdStr = json.get("loot_table_id").getAsString();
         ResourceLocation lootTableId = new ResourceLocation(lootTableIdStr);
 
+        ResourceLocation mobId = null;
+        if (json.has("mob_id")) {
+            String mobIdStr = json.get("mob_id").getAsString();
+            mobId = new ResourceLocation(mobIdStr);
+        }
+
         // Parse entries
         JsonArray entriesArray = json.getAsJsonArray("entries");
         List<LootTableParser.ItemEntryResult> entries = new LinkedList<>();
@@ -100,16 +109,53 @@ public class SupplierLoader extends SimplePreparableReloadListener<Map<ResourceL
             String itemId = entryObj.get("item").getAsString();
             int weight = entryObj.has("weight") ? entryObj.get("weight").getAsInt() : 1;
 
+            // Parse conditions if present
+            List<TextKey> conditions = new LinkedList<>();
+            if (entryObj.has("conditions")) {
+                JsonArray conditionsArray = entryObj.getAsJsonArray("conditions");
+                for (JsonElement conditionElement : conditionsArray) {
+                    JsonObject conditionObj = conditionElement.getAsJsonObject();
+                    TextKey conditionKey = parseCondition(conditionObj);
+                    if (conditionKey != null) {
+                        conditions.add(conditionKey);
+                    }
+                }
+            }
+
             ItemStack stack = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(new ResourceLocation(itemId)));
             entries.add(new LootTableParser.ItemEntryResult(
                 stack,
                 weight,
-                new LinkedList<>(),  // TODO: Support conditions in future
+                conditions,
                 new LinkedList<>()   // TODO: Support functions in future
             ));
         }
 
-        return new JsonLootDataSupplier(lootTableId, contextType, entries);
+        return new JsonLootDataSupplier(lootTableId, contextType, entries, mobId);
+    }
+
+    /**
+     * Parses a condition JSON object into a TextKey for EMI Loot.
+     * Currently supports:
+     * - random_chance: {"type": "random_chance", "chance": 0.5}
+     */
+    private TextKey parseCondition(JsonObject conditionObj) {
+        String type = conditionObj.get("type").getAsString();
+
+        return switch (type) {
+            case "random_chance" -> {
+                double chance = conditionObj.get("chance").getAsDouble();
+                // TextKey index 42 is "emi_loot.condition.chance" with one argument
+                int index = TextKey.getIndex("emi_loot.condition.chance");
+                List<Component> args = new ArrayList<>();
+                args.add(Component.literal(String.format("%.1f", chance * 100)));
+                yield new TextKey(index, args);
+            }
+            default -> {
+                LOGGER.warn("Unknown condition type: {}", type);
+                yield null;
+            }
+        };
     }
 
     /**

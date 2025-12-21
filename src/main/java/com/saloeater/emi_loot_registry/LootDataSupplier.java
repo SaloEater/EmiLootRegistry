@@ -50,4 +50,10 @@ public interface LootDataSupplier {
      *         These will be accumulated into a synthetic loot pool.
      */
     List<LootTableParser.ItemEntryResult> getEntries();
+
+    /**
+     * @return Optional mob/entity identifier for entity-specific loot.
+     *         Can be null if not applicable to this supplier.
+     */
+    ResourceLocation getMobId();
 }

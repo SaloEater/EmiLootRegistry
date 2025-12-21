@@ -1,0 +1,15 @@
+{
+  "loot_table_id": "minecraft:chests/village/village_armorer",
+  "entries": [
+    {
+      "item": "minecraft:brewing_stand",
+      "weight": 5,
+      "conditions": [
+        {
+          "type": "random_chance",
+          "chance": 0.05
+        }
+      ]
+    }
+  ]
+}

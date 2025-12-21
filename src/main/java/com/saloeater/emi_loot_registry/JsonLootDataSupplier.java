@@ -16,11 +16,13 @@ public class JsonLootDataSupplier implements LootDataSupplier {
     private final ResourceLocation lootTableId;
     private final LootContextParamSet contextType;
     private final List<LootTableParser.ItemEntryResult> entries;
+    private final ResourceLocation mobId;
 
-    public JsonLootDataSupplier(ResourceLocation lootTableId, LootContextParamSet contextType, List<LootTableParser.ItemEntryResult> entries) {
+    public JsonLootDataSupplier(ResourceLocation lootTableId, LootContextParamSet contextType, List<LootTableParser.ItemEntryResult> entries, ResourceLocation mobId) {
         this.lootTableId = lootTableId;
         this.contextType = contextType;
         this.entries = entries;
+        this.mobId = mobId;
     }
 
     @Override
@@ -36,5 +38,10 @@ public class JsonLootDataSupplier implements LootDataSupplier {
     @Override
     public List<LootTableParser.ItemEntryResult> getEntries() {
         return entries;
+    }
+
+    @Override
+    public ResourceLocation getMobId() {
+        return mobId;
     }
 }

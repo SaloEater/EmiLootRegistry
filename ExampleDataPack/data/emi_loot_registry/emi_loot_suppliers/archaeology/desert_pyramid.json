@@ -1,0 +1,15 @@
+{
+  "loot_table_id": "minecraft:archaeology/desert_pyramid",
+  "entries": [
+    {
+      "item": "minecraft:brewing_stand",
+      "weight": 10,
+      "conditions": [
+        {
+          "type": "random_chance",
+          "chance": 0.05
+        }
+      ]
+    }
+  ]
+}
