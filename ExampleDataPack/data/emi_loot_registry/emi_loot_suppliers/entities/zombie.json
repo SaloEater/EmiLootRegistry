@@ -9,6 +9,10 @@
         {
           "type": "random_chance",
           "chance": 0.02
+        },
+        {
+          "type": "location",
+          "dimension": "minecraft:the_nether"
         }
       ]
     }

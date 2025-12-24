@@ -5,8 +5,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
+import fzzyhmstrs.emi_loot.parser.LocationPredicateParser;
 import fzzyhmstrs.emi_loot.parser.LootTableParser;
 import fzzyhmstrs.emi_loot.util.TextKey;
+import net.minecraft.advancements.critereon.LocationPredicate;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -15,7 +17,6 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSet;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
-import net.minecraftforge.registries.RegistryObject;
 import org.slf4j.Logger;
 
 import java.io.BufferedReader;
@@ -150,6 +151,10 @@ public class SupplierLoader extends SimplePreparableReloadListener<Map<ResourceL
                 List<Component> args = new ArrayList<>();
                 args.add(Component.literal(String.format("%.1f", chance * 100)));
                 yield new TextKey(index, args);
+            }
+            case "location" -> {
+                var locationPredicate = LocationPredicate.fromJson(conditionObj);
+                yield TextKey.of("emi_loot.condition.location", LocationPredicateParser.parseLocationPredicate(locationPredicate));
             }
             default -> {
                 LOGGER.warn("Unknown condition type: {}", type);
