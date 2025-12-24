@@ -13,6 +13,16 @@
         {
           "type": "location",
           "dimension": "minecraft:the_nether"
+        },
+        {
+          "type": "weather",
+          "thundering": true
+        },
+        {
+          "type": "value_check",
+          "key": "some_mod.translation.key",
+          "value_translation": "some_mod.translation.key",
+          "value_plain": "Required Value"
         }
       ]
     }

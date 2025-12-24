@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import fzzyhmstrs.emi_loot.parser.LocationPredicateParser;
 import fzzyhmstrs.emi_loot.parser.LootTableParser;
+import fzzyhmstrs.emi_loot.parser.condition.WeatherCheckConditionParser;
 import fzzyhmstrs.emi_loot.util.TextKey;
 import net.minecraft.advancements.critereon.LocationPredicate;
 import net.minecraft.network.chat.Component;
@@ -17,6 +18,7 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSet;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.predicates.WeatherCheck;
 import org.slf4j.Logger;
 
 import java.io.BufferedReader;
@@ -155,6 +157,30 @@ public class SupplierLoader extends SimplePreparableReloadListener<Map<ResourceL
             case "location" -> {
                 var locationPredicate = LocationPredicate.fromJson(conditionObj);
                 yield TextKey.of("emi_loot.condition.location", LocationPredicateParser.parseLocationPredicate(locationPredicate));
+            }
+            case "weather" -> {
+                var weatherCheck = (new WeatherCheck.Serializer()).deserialize(conditionObj, null);
+                var parsed = new WeatherCheckConditionParser().parseCondition(weatherCheck, ItemStack.EMPTY, false);
+                yield parsed.get(0).getText();
+            }
+            case "value_check" ->{
+                String key = conditionObj.get("key").getAsString();
+
+                JsonElement valueTranslationJson = conditionObj.get("value_translation");
+                JsonElement valuePlainJson = conditionObj.get("value_plain");
+                if (valueTranslationJson == null && valuePlainJson == null) {
+                    LOGGER.warn("Value check condition missing both translation and plain value for key: {}", key);
+                    yield null;
+                }
+
+                Component valueComponent;
+                if (valuePlainJson == null) {
+                    valueComponent = Component.translatable(valueTranslationJson.getAsString());
+                } else {
+                    valueComponent = Component.literal(valuePlainJson.getAsString());
+                }
+
+                yield TextKey.of("emi_loot.condition.value_check", Component.translatable(key), valueComponent);
             }
             default -> {
                 LOGGER.warn("Unknown condition type: {}", type);
