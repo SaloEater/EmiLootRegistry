@@ -4,7 +4,7 @@
   "entries": [
     {
       "item": "minecraft:brewing_stand",
-      "weight": 2,
+      "weight": 1,
       "conditions": [
         {
           "type": "random_chance",
@@ -20,9 +20,26 @@
         },
         {
           "type": "value_check",
-          "key": "some_mod.translation.key",
-          "value_translation": "some_mod.translation.key",
-          "value_plain": "Required Value"
+          "key": "emi_loot_registry.my_key",
+          "value_translation": "emi_loot_registry.my_value"
+        }
+      ],
+      "functions": [
+        {
+          "function": "minecraft:set_count",
+          "count": 1,
+          "add": true
+        }
+      ]
+    },
+    {
+      "item": "minecraft:diamond",
+      "weight": 1,
+      "conditions": [
+        {
+          "type": "value_check",
+          "key": "emi_loot_registry.my_key",
+          "value_plain": "true"
         }
       ]
     }

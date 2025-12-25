@@ -5,9 +5,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
+import fzzyhmstrs.emi_loot.mixins.SetCountLootFunctionAccessor;
 import fzzyhmstrs.emi_loot.parser.LocationPredicateParser;
 import fzzyhmstrs.emi_loot.parser.LootTableParser;
 import fzzyhmstrs.emi_loot.parser.condition.WeatherCheckConditionParser;
+import fzzyhmstrs.emi_loot.parser.processor.NumberProcessors;
 import fzzyhmstrs.emi_loot.util.TextKey;
 import net.minecraft.advancements.critereon.LocationPredicate;
 import net.minecraft.network.chat.Component;
@@ -16,6 +18,7 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSet;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.predicates.WeatherCheck;
@@ -77,7 +80,7 @@ public class SupplierLoader extends SimplePreparableReloadListener<Map<ResourceL
             try {
                 // Infer context type from folder path
                 LootContextParamSet contextType = inferContextType(fileLocation.getPath());
-                JsonLootDataSupplier supplier = parseSupplier(json, contextType);
+                JsonLootDataSupplier supplier = parseSupplier(json, contextType, resourceManager);
                 loadedSuppliers.add(supplier);
 
                 String name = fileLocation.getPath().replace(BASE_FOLDER + "/", "").replace(".json", "");
@@ -92,7 +95,7 @@ public class SupplierLoader extends SimplePreparableReloadListener<Map<ResourceL
         LOGGER.info("Successfully loaded {} suppliers from datapacks", loadedSuppliers.size());
     }
 
-    private JsonLootDataSupplier parseSupplier(JsonObject json, LootContextParamSet contextType) {
+    private JsonLootDataSupplier parseSupplier(JsonObject json, LootContextParamSet contextType, ResourceManager resourceManager) {
         // Parse loot table ID
         String lootTableIdStr = json.get("loot_table_id").getAsString();
         ResourceLocation lootTableId = new ResourceLocation(lootTableIdStr);
@@ -126,15 +129,59 @@ public class SupplierLoader extends SimplePreparableReloadListener<Map<ResourceL
             }
 
             ItemStack stack = new ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(new ResourceLocation(itemId)));
+
+            List<TextKey> functions = new LinkedList<>();
+            if (entryObj.has("functions")) {
+                JsonArray functionsArray = entryObj.getAsJsonArray("functions");
+                for (JsonElement functionElement : functionsArray) {
+                    JsonObject functionObj = functionElement.getAsJsonObject();
+                    TextKey functionKey = parseFunction(functionObj, stack, resourceManager);
+                    if (functionKey != null) {
+                        functions.add(functionKey);
+                    }
+                }
+            }
+
             entries.add(new LootTableParser.ItemEntryResult(
                 stack,
                 weight,
                 conditions,
-                new LinkedList<>()   // TODO: Support functions in future
+                functions
             ));
         }
 
         return new JsonLootDataSupplier(lootTableId, contextType, entries, mobId);
+    }
+
+    private TextKey parseFunction(JsonObject functionObj, ItemStack stack, ResourceManager resourceManager) {
+        String type = functionObj.get("function").getAsString();
+        return switch (type) {
+            case "minecraft:set_count" -> {
+                var function = LootDataType.MODIFIER.deserialize(ResourceLocation.parse(""), functionObj, resourceManager);
+                if (function.isEmpty()) {
+                    LOGGER.warn("Failed to deserialize set_count function: {}", functionObj);
+                    yield null;
+                }
+                SetCountLootFunctionAccessor setCountLootFunctionAccessor = (SetCountLootFunctionAccessor) function.get();
+                var provider = setCountLootFunctionAccessor.getCountRange();
+                float rollAvg = NumberProcessors.getRollAvg(provider);
+                boolean add = setCountLootFunctionAccessor.getAdd();
+                String key;
+                if (add) {
+                    stack.setCount(Math.max(stack.getCount() + (int)rollAvg, 1));
+                    key = "emi_loot.function.set_count_add";
+                } else {
+                    stack.setCount(Math.max((int)rollAvg, 1));
+                    key = "emi_loot.function.set_count_set";
+                }
+
+                yield TextKey.of(key);
+            }
+            default -> {
+                LOGGER.warn("Unknown function type: {}", functionObj);
+                yield null;
+            }
+        };
     }
 
     /**
